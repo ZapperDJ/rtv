@@ -1,6 +1,8 @@
 {
     "id": "rtv",
     "defaultPlaylists": [
+        "traumateam.min.json",
+        "codelyoko.min.json",
         "speedrun/gdq/agdq2013.min.json",
         "speedrun/gdq/sgdq2013.min.json",
         "speedrun/gdq/agdq2014.min.json",
