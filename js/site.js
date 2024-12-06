@@ -396,6 +396,10 @@ var rtv = {
             player.init(name);
             rtv.player.players.push(player);
 
+            if (playlist.info.hasOwnProperty("name")) {
+                document.title = `RTV | ${playlist.info.name}`
+            }
+
             //TO-DO: Make configurable
             $("#container").append('<div id="chat" class="closed"><iframe data-src="'+player.cache.info.chat+'"></iframe></div>')
 
