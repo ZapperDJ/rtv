@@ -1015,9 +1015,7 @@ var rtv = {
 				rtv.player.destroy.player($("#container > [id^=window-player-]").data("player-index"));
 				rtv.player.spawn(sortedPlaylists[index+1]);
 			}
-			$("[id^=window-player]").each(function() {
-				rtv.player.players[$(this).data()["player-index"]].instance.unMute();
-			});
+			
 					
 
 		},
@@ -1031,9 +1029,7 @@ var rtv = {
 				rtv.player.destroy.player($("#container > [id^=window-player-]").data("player-index"));
 				rtv.player.spawn(sortedPlaylists[index-1]);
 			}
-			$("[id^=window-player]").each(function() {
-				rtv.player.players[$(this).data()["player-index"]].instance.unMute();
-			});
+			
 
 		}
 	},
