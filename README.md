@@ -1,7 +1,20 @@
 # rtv
 A pseudo-live TV implementation to save bandwidth but still function normally.
 
-**[See it in action, pseudo-live!](https://myrtv.github.io/)**
+**[See it in action, pseudo-live!](https://zapperdj.github.io/rtv/)**
+
+## CHANGES
+
+This is a fork of [RTV](https://github.com/myrtv/myrtv.github.io) with some changes inspired by [YTCH](https://ytch.tv), [FreeTVz](https://freetvz.com) and [CouchTube](https://github.com/ozencb/couchtube) 
+
+- Hid and disabled YouTube UI / controls
+- Made menubar floating
+- Added power, volume, channel change, mute, subtitles, and open on YouTube buttons
+- Removed resync button as power button replaces it
+- Updated FontAwesome
+- Changed autohide sidebar button to hide controls button
+
+This changes were tested against youtube, most of them will not work on dailymotion / direct links 
 
 ----
 

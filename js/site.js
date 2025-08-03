@@ -2,8 +2,18 @@ var rtv = {
     offset: 0, //Global sync offset. Tempted to make per-player offsets.
     preinit: async function() {
         var that = this;
-
-        $("body").append($("<div />", {id: 'container'}).append(this.menu.spawn()));
+		var container = $("<div />", {id: 'container'});
+		var playerOff = $("<div />", {id: 'player-off'});
+		var playerOffMessage = $("<div />", {id: 'player-off-message'}).text("Turned Off");;
+		var orientationWarning = $("<div />", {id: 'orientation-warning'});
+		var orientationWarningMessage = $("<div />", {id: 'orientation-warning-message'}).text("Put device in landscape mode");;
+		
+		$("body").append(container);
+        container.append(this.menu.spawn());
+		container.append(playerOff);
+		playerOff.append(playerOffMessage);
+		container.append(orientationWarning);
+		orientationWarning.append(orientationWarningMessage);
 
         await this.config.init();
 
@@ -19,7 +29,7 @@ var rtv = {
     },
     about: function() {
         var about = '<div title="About RTV">'+
-                    '<a href="https://github.com/myrtv/myrtv.github.io" target="_blank">GitHub Repository</a> (submit bugs/requests here)'+
+                    '<a href="https://github.com/ZapperDJ/rtv/" target="_blank">GitHub Repository</a> (submit bugs/requests here)'+
                     '<br><br>Made with jQuery, jQuery UI, Font Awesome, Moment.js, and seedrandom.js (if available)</div>';
 
         $(about).dialog({
@@ -117,7 +127,9 @@ var rtv = {
             }
         },
         defaultPlaylists: [],
-        extraPlaylists: []
+        extraPlaylists: [],
+		subtitles: false,
+		muted: true
     },
     init: function(path) {
         this.player.create(path);
@@ -497,12 +509,14 @@ var rtv = {
                             'autoplay': 1,
                             'rel': 0,
                             'start': current.seek_to,
-                            'modestbranding': 1,
-                            'showinfo': 1
+                            'mute': 1,
+							'cc_load_policy': 1,
+                            'controls': 0
                         },
                         videoId: current.src,
                         events: {
-                            'onReady': that.playerOnReady,
+                            'onReady': (event) => that.playerOnReady(target, event),
+							'onApiChange': (event) => that.playerOnApiChange(target, event),
                             'onStateChange': (event) => that.playerOnStateChange(target, event)
                         }
                     });
@@ -512,8 +526,25 @@ var rtv = {
 
                     return instance;
                 },
-                playerOnReady: function(event) {
-                    //var index = /*COPY FROM BELOW*/
+                playerOnReady: function(target, event) {
+                    var index = $("#"+target).parent().data("player-index");
+
+					
+                },
+				playerOnApiChange: function(target, event) {
+                    var index = $("#"+target).parent().data("player-index");
+					if (rtv.config.subtitles) {
+						rtv.player.players[index].instance.loadModule('captions');
+						
+					} else { 
+						rtv.player.players[index].instance.unloadModule('captions');
+					}
+					if (rtv.config.muted) {
+						rtv.player.players[index].instance.mute();
+						
+					} else { 
+						rtv.player.players[index].instance.unMute();
+					}
                 },
                 playerOnStateChange: function(target, event) {
                     var index = $("#"+target).parent().data("player-index");
@@ -689,19 +720,147 @@ var rtv = {
     },
     menu: {
         spawn: function() {
-            var menu = $("<div id='menu'/>");
-            //{id: "openGuide", text: "Open RTV Guide", class: "pointer"}).click(function() { ;
+            var menu = $("<div id='menu' class='fade-in'/>");
+			var menuColumn1 = $("<div id='menu-column-1'/>");
+			var menuColumn2 = $("<div id='menu-column-2'/>");
+			var menuColumn3 = $("<div id='menu-column-3'/>");
+			var currentColumn = null;
+			
+			// COLUMN 1
+			var currentColumn = menuColumn1;
 
-            $("<i />", {class: "fa fa-th-list", title: "Open RTV Guide"}).click(function() { rtv.guide.open(); }).appendTo(menu);
-            $("<i />", {class: "fa fa-refresh", title: "Resync Players"}).click(function() {
-                //Stolen from guide
-                $("[id^=window-player]").each(function() {rtv.player.players[$(this).data()["player-index"]].resync();});
-            }).appendTo(menu);
-            $("<i />", {class: "fa fa-comments", title: "Toggle chat"}).click(function() {
+			// Power
+			$("<i />", {class: "control-button fa fa-power-off power-button", title: "Power"}).click(function() {
+				$("[id^=window-player]").each(function() {
+					if(rtv.player.players[$(this).data()["player-index"]].instance.getPlayerState() == 1){ // Player playing
+						rtv.player.players[$(this).data()["player-index"]].instance.pauseVideo();
+					}
+					else if(rtv.player.players[$(this).data()["player-index"]].instance.getPlayerState() == 2){ // Player paused
+						rtv.player.players[$(this).data()["player-index"]].resync();
+					}
+;
+				});
+				$("#player-off").toggleClass("display-message");
+            }).appendTo(currentColumn);
+			
+			// Volume up
+			$("<i />", {class: "control-button fa fa-plus", title: "Volume up"}).click(function() {
+                $("[id^=window-player]").each(function() {
+					rtv.player.players[$(this).data()["player-index"]].instance.setVolume(rtv.player.players[$(this).data()["player-index"]].instance.getVolume() + 5);
+				});
+            }).appendTo(currentColumn);
+			
+			// Volume down
+			$("<i />", {class: "control-button fa fa-minus", title: "Volume down"}).click(function() {
+                $("[id^=window-player]").each(function() {
+					rtv.player.players[$(this).data()["player-index"]].instance.setVolume(rtv.player.players[$(this).data()["player-index"]].instance.getVolume() - 5);
+				});
+            }).appendTo(currentColumn);
+			
+			// Chat
+            $("<i />", {class: "control-button fa fa-comments", title: "Toggle chat"}).click(function() {
                 $("#chat").toggleClass("closed")
                 $("#chat iframe").prop("src", function() { return $(this).data("src") })
-            }).appendTo(menu);
-            $("<i />", {class: "fa fa-window-restore", title: "Inline popout"}).click(function() {
+            }).appendTo(currentColumn);
+			
+			
+			// Share
+            this.share().appendTo(currentColumn);
+			
+			//COLUMN 2
+			var currentColumn = menuColumn2;
+			
+			// Guide
+            $("<i />", {class: "control-button fa fa-th-list", title: "Open RTV Guide"}).click(function() { rtv.guide.open(); }).appendTo(menuColumn2);
+			
+			// Mute
+			$("<i />", {class: "control-button fa fa-volume-xmark button-active", title: "Unmute"}).click(function() {
+                $("[id^=window-player]").each(function() {
+					if (rtv.config.muted) {
+						rtv.player.players[$(this).data()["player-index"]].instance.unMute();
+						rtv.config.muted = false;
+						
+					} else { 
+						rtv.player.players[$(this).data()["player-index"]].instance.mute();
+						rtv.config.muted = true;
+					}
+				});
+				$(this).toggleClass("fa-volume-xmark fa-volume-high");
+				$(this).toggleClass("button-active");
+            }).appendTo(currentColumn);
+			
+			// Subtitles
+			$("<i />", {class: "control-button fa fa-closed-captioning", title: "Subtitles"}).click(function() {
+                $("[id^=window-player]").each(function() {
+					if (rtv.config.subtitles) {
+						rtv.player.players[$(this).data()["player-index"]].instance.unloadModule('captions');
+						rtv.config.subtitles = false;
+						
+					} else { 
+						rtv.player.players[$(this).data()["player-index"]].instance.loadModule('captions');
+						rtv.config.subtitles = true;
+					}
+				});
+				$(this).toggleClass("button-active");
+            }).appendTo(currentColumn);
+			
+			// Open in YouTube
+			$("<i />", {class: "control-button fa fa-up-right-from-square", title: "Open in YouTube"}).click(function() {
+                $("[id^=window-player]").each(function() {
+					window.open(rtv.player.players[$(this).data()["player-index"]].instance.getVideoUrl(), '_blank').focus();
+				});
+            }).appendTo(currentColumn);
+			
+
+			//COLUMN 3
+			var currentColumn = menuColumn3;
+			
+			// Full screen
+            $("<i />", {class: "control-button fa fa-expand", title: "Toggle Fullscreen"}).click(function() {
+                if (document.fullscreenElement == null) {
+                    $("body")[0].requestFullscreen()
+                } else {
+                    document.exitFullscreen()
+                }
+                $(this).toggleClass("fa-expand fa-compress");
+            }).appendTo(currentColumn);
+						
+			// Channel up
+			$("<i />", {class: "control-button fa fa-chevron-up", title: "Channel up"}).click(function() { rtv.menu.channelUp(); }).appendTo(currentColumn);
+			
+			// Channel down
+			$("<i />", {class: "control-button fa fa-chevron-down", title: "Channel down"}).click(function() { rtv.menu.channelDown(); }).appendTo(currentColumn);
+			
+			// Sleep timer
+            $("<i />", {class: "control-button fa fa-bed", title: "Sleep Timer"}).click(() => this.sleep.dialog()).appendTo(currentColumn);
+			
+			// Hide controls
+            $("<i />", {class: "fa fa-down-left-and-up-right-to-center", title: "Hide controls"}).click(function() {
+				$(".control-button").each(function() {$(this).toggleClass("no-display");});
+                $(this).toggleClass("fa-up-right-and-down-left-from-center fa-down-left-and-up-right-to-center");
+				$("#menu").toggleClass("fade-in fade-out");
+            }).appendTo(currentColumn);
+            
+			/*UNUSED STUFF
+            menu.tooltip({
+                //position: { my: "left bottom", at: "left+5% bottom", collision: "fit"}
+            })
+			
+			
+			
+			// Play
+			$("<i />", {class: "control-button fa fa-play", title: "Play"}).click(function() {
+				$("[id^=window-player]").each(function() {rtv.player.players[$(this).data()["player-index"]].resync();});
+				$("[id^=window-player]").each(function() {rtv.player.players[$(this).data()["player-index"]].instance.playVideo();});
+            }).appendTo(currentColumn);
+			
+			// Pause
+			$("<i />", {class: "control-button fa fa-pause", title: "Pause"}).click(function() {
+                $("[id^=window-player]").each(function() {rtv.player.players[$(this).data()["player-index"]].instance.pauseVideo();});
+            }).appendTo(currentColumn);
+			
+			// Inline popout
+            $("<i />", {class: "control-button fa fa-window-restore", title: "Inline popout"}).click(function() {
                 $("[id^=window-player]").dialog({
                     close: function() {
                         $("[id^=window-player]")
@@ -711,30 +870,20 @@ var rtv = {
                         $(this).dialog('destroy');
                     }
                 });
-            })//.appendTo(menu); //TO-DO: PERFECT.
-
-            this.share().appendTo(menu);
-
-            $("<hr>").appendTo(menu)
-            $("<i />", {class: "fa fa-close", title: "Auto-hide sidebar"}).click(function() {
-                $("#menu").toggleClass("autohide");
-                $(this).toggleClass("fa-check fa-close");
-            }).appendTo(menu);
-            $("<hr>").appendTo(menu)
-            $("<i />", {class: "fa fa-expand", title: "Toggle Fullscreen"}).click(function() {
-                if (document.fullscreenElement == null) {
-                    $("body")[0].requestFullscreen()
-                } else {
-                    document.exitFullscreen()
-                }
-                $(this).toggleClass("fa-expand fa-compress");
-            }).appendTo(menu);
-            $("<i />", {class: "fa fa-bed", title: "Sleep Timer"}).click(() => this.sleep.dialog()).appendTo(menu);
-            $("<div />", {id: 'recents'}).appendTo(menu);
-
-            menu.tooltip({
-                position: { my: "left center", at: "right+10% center", collision: "fit"}
-            })
+            }).appendTo(currentColumn);
+			
+			// Resync
+            $("<i />", {class: "control-button fa fa-refresh", title: "Resync Players"}).click(function() {
+                $("[id^=window-player]").each(function() {rtv.player.players[$(this).data()["player-index"]].resync();});
+            }).appendTo(currentColumn);
+			
+			
+			$("<div />", {id: 'recents'}).appendTo(currentColumn);
+			
+			*/
+			menuColumn1.appendTo(menu);
+			menuColumn2.appendTo(menu);
+			menuColumn3.appendTo(menu);
 
             return menu;
         },
@@ -796,7 +945,7 @@ var rtv = {
             }
         },
         share: function() {
-            return $("<i />", {class: "fa fa-paper-plane", title: "Share this channel"}).click(function() {
+            return $("<i />", {class: "control-button fa fa-share-nodes", title: "Share this channel"}).click(function() {
                 var item = rtv.player.players[$("[id^=window-player]").eq(0).data()["player-index"]].cache;
 
                 if (/^custom\d+$/.test(item.info.url)) {
@@ -855,8 +1004,39 @@ var rtv = {
                     })
                 }
             })
-        }
-    },
+        },
+		channelUp: function () {
+			var currentPlaylist = localStorage['rtvLastPlaylist'];
+			var sortedPlaylists = Object.keys(rtv.player.cached_playlists).sort();
+			
+			index = sortedPlaylists.indexOf(currentPlaylist);
+			
+			if (index < sortedPlaylists.length -1) {
+				rtv.player.destroy.player($("#container > [id^=window-player-]").data("player-index"));
+				rtv.player.spawn(sortedPlaylists[index+1]);
+			}
+			$("[id^=window-player]").each(function() {
+				rtv.player.players[$(this).data()["player-index"]].instance.unMute();
+			});
+					
+
+		},
+		channelDown: function () {
+			var currentPlaylist = localStorage['rtvLastPlaylist'];
+			var sortedPlaylists = Object.keys(rtv.player.cached_playlists).sort();
+			
+			index = sortedPlaylists.indexOf(currentPlaylist);
+
+			if (index > 0) {
+				rtv.player.destroy.player($("#container > [id^=window-player-]").data("player-index"));
+				rtv.player.spawn(sortedPlaylists[index-1]);
+			}
+			$("[id^=window-player]").each(function() {
+				rtv.player.players[$(this).data()["player-index"]].instance.unMute();
+			});
+
+		}
+	},
     guide: {
         config: {
             markerWidth: 120, //Width of time markers (9:00pm, 9:30pm, etc.) in pixels
@@ -1171,7 +1351,7 @@ var rtv = {
             var head = $("<div />", {class: "guideHead"});
             $.each([
                 ["Close RTV Guide", function() { rtv.guide.close(); }],
-                ["Resync Player", function() {$("[id^=window-player]").each(function() {rtv.player.players[$(this).data()["player-index"]].resync();});}],
+               // ["Resync Player", function() {$("[id^=window-player]").each(function() {rtv.player.players[$(this).data()["player-index"]].resync();});}],
                 ["Select Channels", function() { rtv.guide.channels.open(); }],
                 ["About RTV", function() { rtv.about(); }]
             ], function(i,v) {
